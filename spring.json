@@ -1,0 +1,60 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+ name: sample
+spec:
+ replicas: 1
+ template:
+   metadata:
+     labels:
+       name: sample-deployment
+   spec:
+     containers:
+     - name: sample
+       image: sample-image
+       env:
+         - name: MB_KEYSTORE_PASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: mb-keystore-password
+               key: password
+         - name: MB_TRUSTSTORE_PASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: mb-truststore-password
+               key: password
+       volumeMounts:
+         - name: keystores
+           mountPath: /etc/wlp/config/keystore
+           readOnly: true
+         - name: truststores
+           mountPath: /etc/wlp/config/truststore
+           readOnly: true
+         - name: liberty-logging-config
+           mountPath: /config/configDropins
+     volumes:
+       - name: keystores
+         secret:
+           secretName: mb-keystore
+       - name: truststores
+         secret:
+           secretName: mb-truststore
+       - name: liberty-logging-config
+         configMap:
+           name: liberty-logging-config
+           items:
+             - key: keystore.xml
+               path: defaults/keystore.xml
+             - key: logging.xml
+               path: defaults/logging.xml
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: sample-service
+spec:
+ ports:
+   - port: 9080
+ selector:
+   name: sample-deployment
+ type: NodePort
